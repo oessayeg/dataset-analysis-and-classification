@@ -50,6 +50,46 @@ def get_minimum_value(column: pd.Series):
     return min_value
 
 
+def get_median(sorted_column: pd.Series):
+    if len(sorted_column) % 2 == 1:
+        return sorted_column.iloc[(len(sorted_column) - 1) // 2]
+
+    return (
+        sorted_column.iloc[(len(sorted_column) // 2) - 1]
+        + sorted_column.iloc[(len(sorted_column)) // 2]
+    ) / 2
+
+
+def get_first_quartile(sorted_column: pd.Series):
+    if len(sorted_column) % 2 == 0:
+        first_segment_of_split_column = sorted_column[: int(len(sorted_column) / 2)]
+        return get_median(first_segment_of_split_column)
+    first_segment_of_split_column = sorted_column[
+        : int(((len(sorted_column) - 1) / 2))
+    ]
+    return get_median(first_segment_of_split_column)
+
+
+def get_third_quartile(sorted_column: pd.Series):
+    if len(sorted_column) % 2 == 0:
+        first_segment_of_split_column = sorted_column[int(len(sorted_column) / 2) :]
+        return get_median(first_segment_of_split_column)
+    first_segment_of_split_column = sorted_column[
+        int(((len(sorted_column) - 1) / 2) + 1) :
+    ]
+    return get_median(first_segment_of_split_column)
+
+
+def get_quartiles(column: pd.Series) -> tuple[float, float, float]:
+    cleaned_column = column.dropna()
+    sorted_column = cleaned_column.sort_values()
+    median = get_median(sorted_column)
+    first_quartile = get_first_quartile(sorted_column)
+    third_quartile = get_third_quartile(sorted_column)
+
+    return first_quartile, median, third_quartile
+
+
 def get_maximum_value(column: pd.Series):
     got_first_maximum_value = False
     min_value = 0
@@ -90,6 +130,7 @@ def descrine_column(column: pd.Series):
     standard_deviation = get_standard_deviation(
         mean, full_count_excluding_nan_values, column
     )
+    q1, q2, q3 = get_quartiles(column)
 
     print("Full count ->", full_count)
     print("Count excluding nan values ->", full_count_excluding_nan_values)
@@ -97,6 +138,9 @@ def descrine_column(column: pd.Series):
     print("Standard deviation ->", standard_deviation)
     print("Minimum value ->", min_value)
     print("Maximum value ->", max_value)
+    print("Q1 ->", q1)
+    print("Q2 ->", q2)
+    print("Q3 ->", q3)
 
 
 if __name__ == "__main__":
