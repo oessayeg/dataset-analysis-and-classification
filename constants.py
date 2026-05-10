@@ -1,0 +1,12 @@
+DATASET_FILENAME = "dataset_train.csv"
+INDEX_COLUMN = "Index"
+
+FULL_COUNT_KEY = "full_count"
+COUNT_KEY = "count"
+MEAN_KEY = "mean"
+STD_KEY = "std"
+MIN_KEY = "min"
+MAX_KEY = "max"
+Q1_KEY = "25%"
+Q2_KEY = "50%"
+Q3_KEY = "75%"
