@@ -210,7 +210,7 @@ def describe_transposed(
         print(row)
 
 
-def main():
+def get_full_columns_description_map() -> dict[str, dict[str, int | float]]:
     df = read_csv_dataset(DATASET_FILENAME)
     full_columns_description_map: dict[str, dict[str, int | float]] = {}
 
@@ -222,6 +222,11 @@ def main():
             full_columns_description_map[column] = column_description_map
         else:
             continue
+    return full_columns_description_map
+
+
+def main():
+    full_columns_description_map = get_full_columns_description_map()
 
     # describe(full_columns_description_map)
     describe_transposed(full_columns_description_map)
