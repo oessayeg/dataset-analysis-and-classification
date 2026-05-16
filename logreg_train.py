@@ -23,10 +23,13 @@ FEATURES = [
 TARGET = "Hogwarts House"
 
 
-def load_dataset(path: str) -> pd.DataFrame:
+def load_dataset(path: str) -> tuple[pd.DataFrame, dict[str, float]]:
     df = pd.read_csv(path)
-    df = df[FEATURES + [TARGET]].dropna()
-    return df
+    df = df[FEATURES + [TARGET]]
+    imputation_means = df[FEATURES].mean().to_dict()
+    df[FEATURES] = df[FEATURES].fillna(imputation_means)
+    df = df.dropna(subset=[TARGET])
+    return df, imputation_means
 
 
 def sigmoid(z: np.ndarray) -> np.ndarray:
@@ -44,17 +47,18 @@ def standardize(X: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     return (X - mean) / std, mean, std
 
 
-def save_weights(weights: dict[str, dict[str, np.ndarray | float]]):
+def save_weights(weights: dict[str, dict[str, np.ndarray | float]], imputation_means: dict[str, float]):
     model = {
         house: {"w": data["w"].tolist(), "b": float(data["b"])}  # type: ignore[union-attr]
         for house, data in weights.items()
     }
+    model["imputation_means"] = imputation_means  # type: ignore[assignment]
     with open("weights.json", "w") as f:
         json.dump(model, f)
     print("Weights saved to weights.json")
 
 
-def train(df: pd.DataFrame):
+def train(df: pd.DataFrame, imputation_means: dict[str, float]):
     houses = sorted(df[TARGET].unique())
     X = df[FEATURES].values
     X, mean, std = standardize(X)
@@ -91,7 +95,7 @@ def train(df: pd.DataFrame):
         b_real = b - np.sum(w * mean / std)
         weights[house] = {"w": w_real, "b": b_real}
 
-    save_weights(weights)
+    save_weights(weights, imputation_means)
 
 
 def main():
@@ -99,9 +103,9 @@ def main():
         print("Usage: python logreg_train.py <dataset_path>")
         sys.exit(1)
 
-    df = load_dataset(sys.argv[1])
+    df, imputation_means = load_dataset(sys.argv[1])
     print(f"Dataset loaded: {len(df)} samples, {len(FEATURES)} features")
-    train(df)
+    train(df, imputation_means)
 
 
 if __name__ == "__main__":

@@ -52,6 +52,10 @@ def main():
     df = pd.read_csv(sys.argv[1])
     weights = load_weights("weights.json")
 
+    imputation_means = weights.pop("imputation_means", {})
+    if imputation_means:
+        df[FEATURES] = df[FEATURES].fillna(imputation_means)
+
     predictions = predict(df, weights)
     df[TARGET] = predictions
     df[["Index", TARGET]].to_csv("houses.csv", index=False)
