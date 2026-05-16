@@ -12,6 +12,9 @@ from constants import (
     Q1_KEY,
     Q2_KEY,
     Q3_KEY,
+    VARIANCE_KEY,
+    MISSING_COUNT_KEY,
+    MISSING_PCT_KEY,
 )
 
 
@@ -115,9 +118,9 @@ def get_maximum_value(column: pd.Series):
     return min_value
 
 
-def get_standard_deviation(
+def get_variance_and_std(
     mean: float, full_count_excluding_nan_values: int, column: pd.Series
-) -> float:
+) -> tuple[float, float]:
     sum_of_squared_distances_from_mean = 0
 
     for value in column:
@@ -125,18 +128,20 @@ def get_standard_deviation(
             continue
         sum_of_squared_distances_from_mean += (value - mean) ** 2
 
-    return sqrt(
-        sum_of_squared_distances_from_mean / (full_count_excluding_nan_values - 1)
+    variance = sum_of_squared_distances_from_mean / (
+        full_count_excluding_nan_values - 1
     )
+    return variance, sqrt(variance)
 
 
 def describe_column(column: pd.Series) -> dict[str, int | float]:
     full_count = get_count(column)
     full_count_excluding_nan_values = get_count_excluding_nan_values(column)
+    missing_count = full_count - full_count_excluding_nan_values
     mean = get_mean(column)
     min_value = get_minimum_value(column)
     max_value = get_maximum_value(column)
-    standard_deviation = get_standard_deviation(
+    variance, standard_deviation = get_variance_and_std(
         mean, full_count_excluding_nan_values, column
     )
     q1, q2, q3 = get_quartiles(column)
@@ -144,8 +149,11 @@ def describe_column(column: pd.Series) -> dict[str, int | float]:
     return {
         FULL_COUNT_KEY: full_count,
         COUNT_KEY: full_count_excluding_nan_values,
+        MISSING_COUNT_KEY: missing_count,
+        MISSING_PCT_KEY: missing_count / full_count * 100,
         MEAN_KEY: mean,
         STD_KEY: standard_deviation,
+        VARIANCE_KEY: variance,
         MIN_KEY: min_value,
         MAX_KEY: max_value,
         Q1_KEY: q1,
@@ -157,8 +165,11 @@ def describe_column(column: pd.Series) -> dict[str, int | float]:
 def describe(columns_description_map: dict[str, dict[str, int | float]]) -> None:
     row_labels = [
         ("Count", COUNT_KEY),
+        ("Missing", MISSING_COUNT_KEY),
+        ("Missing%", MISSING_PCT_KEY),
         ("Mean", MEAN_KEY),
         ("Std", STD_KEY),
+        ("Variance", VARIANCE_KEY),
         ("Min", MIN_KEY),
         ("25%", Q1_KEY),
         ("50%", Q2_KEY),
@@ -185,8 +196,11 @@ def describe_transposed(
 ) -> None:
     stat_labels = [
         ("Count", COUNT_KEY),
+        ("Missing", MISSING_COUNT_KEY),
+        ("Missing%", MISSING_PCT_KEY),
         ("Mean", MEAN_KEY),
         ("Std", STD_KEY),
+        ("Variance", VARIANCE_KEY),
         ("Min", MIN_KEY),
         ("25%", Q1_KEY),
         ("50%", Q2_KEY),
@@ -196,7 +210,7 @@ def describe_transposed(
 
     col_names = list(columns_description_map.keys())
     stat_headers = [label for label, _ in stat_labels]
-    stat_width = 15
+    stat_width = 18
     label_width = max(len(name) for name in col_names)
 
     header = " " * label_width + "".join(h.rjust(stat_width) for h in stat_headers)
@@ -210,7 +224,9 @@ def describe_transposed(
         print(row)
 
 
-def get_full_columns_description_map(filename: str) -> dict[str, dict[str, int | float]]:
+def get_full_columns_description_map(
+    filename: str,
+) -> dict[str, dict[str, int | float]]:
     df = read_csv_dataset(filename)
     full_columns_description_map: dict[str, dict[str, int | float]] = {}
 
