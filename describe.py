@@ -1,7 +1,7 @@
+import sys
 import pandas as pd
 from math import sqrt
 from constants import (
-    DATASET_FILENAME,
     INDEX_COLUMN,
     FULL_COUNT_KEY,
     COUNT_KEY,
@@ -210,8 +210,8 @@ def describe_transposed(
         print(row)
 
 
-def get_full_columns_description_map() -> dict[str, dict[str, int | float]]:
-    df = read_csv_dataset(DATASET_FILENAME)
+def get_full_columns_description_map(filename: str) -> dict[str, dict[str, int | float]]:
+    df = read_csv_dataset(filename)
     full_columns_description_map: dict[str, dict[str, int | float]] = {}
 
     for column in df.columns:
@@ -226,7 +226,11 @@ def get_full_columns_description_map() -> dict[str, dict[str, int | float]]:
 
 
 def main():
-    full_columns_description_map = get_full_columns_description_map()
+    if len(sys.argv) != 2:
+        print("Usage: python describe.py <dataset.csv>")
+        sys.exit(1)
+
+    full_columns_description_map = get_full_columns_description_map(sys.argv[1])
 
     # describe(full_columns_description_map)
     describe_transposed(full_columns_description_map)
