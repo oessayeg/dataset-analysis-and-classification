@@ -6,6 +6,7 @@ import pandas as pd
 EPOCHS = 10000
 LEARNING_RATE = 0.1
 TOLERANCE = 1e-6
+OPTIMIZER = "batch"
 
 FEATURES = [
     "Defense Against the Dark Arts",
@@ -47,7 +48,10 @@ def standardize(X: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     return (X - mean) / std, mean, std
 
 
-def save_weights(weights: dict[str, dict[str, np.ndarray | float]], imputation_means: dict[str, float]):
+def save_weights(
+    weights: dict[str, dict[str, np.ndarray | float]],
+    imputation_means: dict[str, float],
+):
     model = {
         house: {"w": data["w"].tolist(), "b": float(data["b"])}  # type: ignore[union-attr]
         for house, data in weights.items()
@@ -56,6 +60,55 @@ def save_weights(weights: dict[str, dict[str, np.ndarray | float]], imputation_m
     with open("weights.json", "w") as f:
         json.dump(model, f)
     print("Weights saved to weights.json")
+
+
+def train_batch(X, y, w, b):
+    prev_loss = float("inf")
+    loss = float("inf")
+
+    for epoch in range(EPOCHS):
+        z = X @ w + b
+        y_hat = sigmoid(z)
+
+        loss = compute_loss(y, y_hat)
+        if abs(prev_loss - loss) < TOLERANCE:
+            print(f"  converged at epoch {epoch}")
+            break
+        prev_loss = loss
+
+        error = y_hat - y
+        dw = (X.T @ error) / len(y)
+        db = np.sum(error) / len(y)
+
+        w -= LEARNING_RATE * dw
+        b -= LEARNING_RATE * db
+
+    return w, b, loss
+
+
+def train_sgd(X, y, w, b):
+    n = len(y)
+    loss = float("inf")
+
+    for epoch in range(EPOCHS):
+        indices = np.random.permutation(n)
+        for i in indices:
+            z = X[i] @ w + b
+            y_hat = sigmoid(z)
+            error = y_hat - y[i]
+            w -= LEARNING_RATE * X[i] * error
+            b -= LEARNING_RATE * error
+
+        z = X @ w + b
+        y_hat = sigmoid(z)
+        prev_loss = loss
+        loss = compute_loss(y, y_hat)
+
+        if abs(prev_loss - loss) < TOLERANCE:
+            print(f"  converged at epoch {epoch}")
+            break
+
+    return w, b, loss
 
 
 def train(df: pd.DataFrame, imputation_means: dict[str, float]):
@@ -70,27 +123,13 @@ def train(df: pd.DataFrame, imputation_means: dict[str, float]):
         w = np.zeros(n_features)
         b = 0.0
 
-        loss = float("inf")
-        prev_loss = float("inf")
+        print(f"Training {house} ({OPTIMIZER})...")
+        if OPTIMIZER == "sgd":
+            w, b, loss = train_sgd(X, y, w, b)
+        else:
+            w, b, loss = train_batch(X, y, w, b)
 
-        for epoch in range(EPOCHS):
-            z = X @ w + b
-            y_hat = sigmoid(z)
-
-            loss = compute_loss(y, y_hat)
-            if abs(prev_loss - loss) < TOLERANCE:
-                print(f"{house}: converged at epoch {epoch}")
-                break
-            prev_loss = loss
-
-            error = y_hat - y
-            dw = (X.T @ error) / len(y)
-            db = np.sum(error) / len(y)
-
-            w -= LEARNING_RATE * dw
-            b -= LEARNING_RATE * db
-
-        print(f"{house}: final loss = {loss:.4f}")
+        print(f"  final loss = {loss:.4f}")
         w_real = w / std
         b_real = b - np.sum(w * mean / std)
         weights[house] = {"w": w_real, "b": b_real}
@@ -99,11 +138,26 @@ def train(df: pd.DataFrame, imputation_means: dict[str, float]):
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python logreg_train.py <dataset_path>")
+    global OPTIMIZER
+
+    if len(sys.argv) < 2:
+        print("Usage: python logreg_train.py <dataset_path> [--optimizer batch|sgd]")
         sys.exit(1)
 
-    df, imputation_means = load_dataset(sys.argv[1])
+    args = sys.argv[1:]
+    dataset_path = args[0]
+
+    if "--optimizer" in args:
+        idx = args.index("--optimizer")
+        if idx + 1 >= len(args):
+            print("Error: --optimizer requires a value (batch or sgd)")
+            sys.exit(1)
+        OPTIMIZER = args[idx + 1]
+        if OPTIMIZER not in ("batch", "sgd"):
+            print(f"Error: unknown optimizer '{OPTIMIZER}', choose batch or sgd")
+            sys.exit(1)
+
+    df, imputation_means = load_dataset(dataset_path)
     print(f"Dataset loaded: {len(df)} samples, {len(FEATURES)} features")
     train(df, imputation_means)
 
