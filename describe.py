@@ -18,6 +18,7 @@ from constants import (
     IQR_KEY,
     LOWER_FENCE_KEY,
     UPPER_FENCE_KEY,
+    OUTLIER_COUNT_KEY,
 )
 
 
@@ -137,6 +138,16 @@ def get_variance_and_std(
     return variance, sqrt(variance)
 
 
+def get_outlier_count(column: pd.Series, lower_fence: float, upper_fence: float) -> int:
+    count = 0
+    for value in column:
+        if pd.isna(value):
+            continue
+        if value < lower_fence or value > upper_fence:
+            count += 1
+    return count
+
+
 def describe_column(column: pd.Series) -> dict[str, int | float]:
     full_count = get_count(column)
     full_count_excluding_nan_values = get_count_excluding_nan_values(column)
@@ -166,6 +177,7 @@ def describe_column(column: pd.Series) -> dict[str, int | float]:
         IQR_KEY: iqr,
         LOWER_FENCE_KEY: q1 - 1.5 * iqr,
         UPPER_FENCE_KEY: q3 + 1.5 * iqr,
+        OUTLIER_COUNT_KEY: get_outlier_count(column, q1 - 1.5 * iqr, q3 + 1.5 * iqr),
     }
 
 
@@ -185,6 +197,7 @@ def describe(columns_description_map: dict[str, dict[str, int | float]]) -> None
         ("IQR", IQR_KEY),
         ("LowerFence", LOWER_FENCE_KEY),
         ("UpperFence", UPPER_FENCE_KEY),
+        ("Outliers", OUTLIER_COUNT_KEY),
     ]
 
     col_names = list(columns_description_map.keys())
@@ -219,6 +232,7 @@ def describe_transposed(
         ("IQR", IQR_KEY),
         ("LowerFence", LOWER_FENCE_KEY),
         ("UpperFence", UPPER_FENCE_KEY),
+        ("Outliers", OUTLIER_COUNT_KEY),
     ]
 
     col_names = list(columns_description_map.keys())
