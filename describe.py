@@ -15,6 +15,9 @@ from constants import (
     VARIANCE_KEY,
     MISSING_COUNT_KEY,
     MISSING_PCT_KEY,
+    IQR_KEY,
+    LOWER_FENCE_KEY,
+    UPPER_FENCE_KEY,
 )
 
 
@@ -145,6 +148,7 @@ def describe_column(column: pd.Series) -> dict[str, int | float]:
         mean, full_count_excluding_nan_values, column
     )
     q1, q2, q3 = get_quartiles(column)
+    iqr = q3 - q1
 
     return {
         FULL_COUNT_KEY: full_count,
@@ -159,6 +163,9 @@ def describe_column(column: pd.Series) -> dict[str, int | float]:
         Q1_KEY: q1,
         Q2_KEY: q2,
         Q3_KEY: q3,
+        IQR_KEY: iqr,
+        LOWER_FENCE_KEY: q1 - 1.5 * iqr,
+        UPPER_FENCE_KEY: q3 + 1.5 * iqr,
     }
 
 
@@ -175,6 +182,9 @@ def describe(columns_description_map: dict[str, dict[str, int | float]]) -> None
         ("50%", Q2_KEY),
         ("75%", Q3_KEY),
         ("Max", MAX_KEY),
+        ("IQR", IQR_KEY),
+        ("LowerFence", LOWER_FENCE_KEY),
+        ("UpperFence", UPPER_FENCE_KEY),
     ]
 
     col_names = list(columns_description_map.keys())
@@ -206,6 +216,9 @@ def describe_transposed(
         ("50%", Q2_KEY),
         ("75%", Q3_KEY),
         ("Max", MAX_KEY),
+        ("IQR", IQR_KEY),
+        ("LowerFence", LOWER_FENCE_KEY),
+        ("UpperFence", UPPER_FENCE_KEY),
     ]
 
     col_names = list(columns_description_map.keys())
