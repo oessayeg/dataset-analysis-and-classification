@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-EPOCHS = 10000
+EPOCHS: int = 10000
 LEARNING_RATE = 0.1
 TOLERANCE = 1e-6
 OPTIMIZER = "batch"
@@ -195,10 +195,10 @@ def train(df: pd.DataFrame, imputation_means: dict[str, float]):
 
 
 def main():
-    global OPTIMIZER
+    global OPTIMIZER, EPOCHS
 
     if len(sys.argv) < 2:
-        print("Usage: python logreg_train.py <dataset_path> [--optimizer batch|sgd|minibatch]")
+        print("Usage: python logreg_train.py <dataset_path> [--optimizer batch|sgd|minibatch] [--epochs N]")
         sys.exit(1)
 
     args = sys.argv[1:]
@@ -212,6 +212,19 @@ def main():
         OPTIMIZER = args[idx + 1]
         if OPTIMIZER not in ("batch", "sgd", "minibatch"):
             print(f"Error: unknown optimizer '{OPTIMIZER}', choose batch, sgd or minibatch")
+            sys.exit(1)
+
+    if "--epochs" in args:
+        idx = args.index("--epochs")
+        if idx + 1 >= len(args):
+            print("Error: --epochs requires a value")
+            sys.exit(1)
+        try:
+            EPOCHS = int(args[idx + 1])
+            if EPOCHS <= 0:
+                raise ValueError
+        except ValueError:
+            print("Error: --epochs must be a positive integer")
             sys.exit(1)
 
     df, imputation_means = load_dataset(dataset_path)
