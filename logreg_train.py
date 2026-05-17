@@ -7,6 +7,7 @@ EPOCHS = 10000
 LEARNING_RATE = 0.1
 TOLERANCE = 1e-6
 OPTIMIZER = "batch"
+BATCH_SIZE = 32
 
 FEATURES = [
     "Defense Against the Dark Arts",
@@ -111,6 +112,36 @@ def train_sgd(X, y, w, b):
     return w, b, loss
 
 
+def train_minibatch(X: np.ndarray, y: np.ndarray, w: np.ndarray, b: float):
+    n = len(y)
+    loss = float("inf")
+
+    for epoch in range(EPOCHS):
+        indices = np.random.permutation(n)
+        for start in range(0, n, BATCH_SIZE):
+            batch = indices[start:start + BATCH_SIZE]
+            X_batch = X[batch]
+            y_batch = y[batch]
+            z = X_batch @ w + b
+            y_hat = sigmoid(z)
+            error = y_hat - y_batch
+            dw = (X_batch.T @ error) / len(batch)
+            db = np.sum(error) / len(batch)
+            w -= LEARNING_RATE * dw
+            b -= LEARNING_RATE * db
+
+        z = X @ w + b
+        y_hat = sigmoid(z)
+        prev_loss = loss
+        loss = compute_loss(y, y_hat)
+
+        if abs(prev_loss - loss) < TOLERANCE:
+            print(f"  converged at epoch {epoch}")
+            break
+
+    return w, b, loss
+
+
 def train(df: pd.DataFrame, imputation_means: dict[str, float]):
     houses = sorted(df[TARGET].unique())
     X = df[FEATURES].values
@@ -126,6 +157,8 @@ def train(df: pd.DataFrame, imputation_means: dict[str, float]):
         print(f"Training {house} ({OPTIMIZER})...")
         if OPTIMIZER == "sgd":
             w, b, loss = train_sgd(X, y, w, b)
+        elif OPTIMIZER == "minibatch":
+            w, b, loss = train_minibatch(X, y, w, b)
         else:
             w, b, loss = train_batch(X, y, w, b)
 
@@ -141,7 +174,7 @@ def main():
     global OPTIMIZER
 
     if len(sys.argv) < 2:
-        print("Usage: python logreg_train.py <dataset_path> [--optimizer batch|sgd]")
+        print("Usage: python logreg_train.py <dataset_path> [--optimizer batch|sgd|minibatch]")
         sys.exit(1)
 
     args = sys.argv[1:]
@@ -153,8 +186,8 @@ def main():
             print("Error: --optimizer requires a value (batch or sgd)")
             sys.exit(1)
         OPTIMIZER = args[idx + 1]
-        if OPTIMIZER not in ("batch", "sgd"):
-            print(f"Error: unknown optimizer '{OPTIMIZER}', choose batch or sgd")
+        if OPTIMIZER not in ("batch", "sgd", "minibatch"):
+            print(f"Error: unknown optimizer '{OPTIMIZER}', choose batch, sgd or minibatch")
             sys.exit(1)
 
     df, imputation_means = load_dataset(dataset_path)
