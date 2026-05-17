@@ -55,10 +55,10 @@ def save_weights(
     imputation_means: dict[str, float],
 ):
     model = {
-        house: {"w": data["w"].tolist(), "b": float(data["b"])}  # type: ignore[union-attr]
+        house: {"w": data["w"].tolist(), "b": float(data["b"])}
         for house, data in weights.items()
     }
-    model["imputation_means"] = imputation_means  # type: ignore[assignment]
+    model["imputation_means"] = imputation_means
     with open("weights.json", "w") as f:
         json.dump(model, f)
     print("Weights saved to weights.json")
@@ -138,7 +138,7 @@ def train_minibatch(X: np.ndarray, y: np.ndarray, w: np.ndarray, b: float):
     for epoch in range(EPOCHS):
         indices = np.random.permutation(n)
         for start in range(0, n, BATCH_SIZE):
-            batch = indices[start:start + BATCH_SIZE]
+            batch = indices[start : start + BATCH_SIZE]
             X_batch = X[batch]
             y_batch = y[batch]
             z = X_batch @ w + b
@@ -198,7 +198,9 @@ def main():
     global OPTIMIZER, EPOCHS
 
     if len(sys.argv) < 2:
-        print("Usage: python logreg_train.py <dataset_path> [--optimizer batch|sgd|minibatch] [--epochs N]")
+        print(
+            "Usage: python logreg_train.py <dataset_path> [--optimizer batch|sgd|minibatch] [--epochs N]"
+        )
         sys.exit(1)
 
     args = sys.argv[1:]
@@ -211,7 +213,9 @@ def main():
             sys.exit(1)
         OPTIMIZER = args[idx + 1]
         if OPTIMIZER not in ("batch", "sgd", "minibatch"):
-            print(f"Error: unknown optimizer '{OPTIMIZER}', choose batch, sgd or minibatch")
+            print(
+                f"Error: unknown optimizer '{OPTIMIZER}', choose batch, sgd or minibatch"
+            )
             sys.exit(1)
 
     if "--epochs" in args:
