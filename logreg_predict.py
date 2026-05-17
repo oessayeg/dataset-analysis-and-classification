@@ -45,12 +45,13 @@ def predict(
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python predict.py <dataset_path>")
+    if len(sys.argv) < 2 or len(sys.argv) > 3:
+        print("Usage: python logreg_predict.py <dataset_path> [weights.json]")
         sys.exit(1)
 
     df = pd.read_csv(sys.argv[1])
-    weights = load_weights("weights.json")
+    weights_path = sys.argv[2] if len(sys.argv) == 3 else "weights.json"
+    weights = load_weights(weights_path)
 
     imputation_means = weights.pop("imputation_means", {})
     if imputation_means:

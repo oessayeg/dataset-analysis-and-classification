@@ -23,7 +23,7 @@ def build_bin_edges(min_val: float, max_val: float, bin_width: float) -> list[fl
 
 def show_courses_histograms_by_house():
     df = pd.read_csv(DATASET_FILENAME)
-    columns_stats = get_full_columns_description_map()
+    columns_stats = get_full_columns_description_map(DATASET_FILENAME)
     houses: list[str] = sorted(df["Hogwarts House"].dropna().unique().tolist())
     color_cycle = plt.rcParams["axes.prop_cycle"].by_key()["color"]
     house_colors = {
