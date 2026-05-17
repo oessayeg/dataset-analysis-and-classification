@@ -2,6 +2,7 @@ import json
 import sys
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 EPOCHS = 10000
 LEARNING_RATE = 0.1
@@ -63,15 +64,30 @@ def save_weights(
     print("Weights saved to weights.json")
 
 
-def train_batch(X, y, w, b):
+def plot_loss_curves(loss_histories: dict[str, list[float]]):
+    for house, history in loss_histories.items():
+        plt.plot(history, label=house)
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title(f"Loss curves ({OPTIMIZER})")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("loss_curves.png")
+    print("Loss curves saved to loss_curves.png")
+    plt.show()
+
+
+def train_batch(X: np.ndarray, y: np.ndarray, w: np.ndarray, b: float):
     prev_loss = float("inf")
     loss = float("inf")
+    history = []
 
     for epoch in range(EPOCHS):
         z = X @ w + b
         y_hat = sigmoid(z)
 
         loss = compute_loss(y, y_hat)
+        history.append(loss)
         if abs(prev_loss - loss) < TOLERANCE:
             print(f"  converged at epoch {epoch}")
             break
@@ -84,12 +100,13 @@ def train_batch(X, y, w, b):
         w -= LEARNING_RATE * dw
         b -= LEARNING_RATE * db
 
-    return w, b, loss
+    return w, b, loss, history
 
 
-def train_sgd(X, y, w, b):
+def train_sgd(X: np.ndarray, y: np.ndarray, w: np.ndarray, b: float):
     n = len(y)
     loss = float("inf")
+    history = []
 
     for epoch in range(EPOCHS):
         indices = np.random.permutation(n)
@@ -104,17 +121,19 @@ def train_sgd(X, y, w, b):
         y_hat = sigmoid(z)
         prev_loss = loss
         loss = compute_loss(y, y_hat)
+        history.append(loss)
 
         if abs(prev_loss - loss) < TOLERANCE:
             print(f"  converged at epoch {epoch}")
             break
 
-    return w, b, loss
+    return w, b, loss, history
 
 
 def train_minibatch(X: np.ndarray, y: np.ndarray, w: np.ndarray, b: float):
     n = len(y)
     loss = float("inf")
+    history = []
 
     for epoch in range(EPOCHS):
         indices = np.random.permutation(n)
@@ -134,12 +153,13 @@ def train_minibatch(X: np.ndarray, y: np.ndarray, w: np.ndarray, b: float):
         y_hat = sigmoid(z)
         prev_loss = loss
         loss = compute_loss(y, y_hat)
+        history.append(loss)
 
         if abs(prev_loss - loss) < TOLERANCE:
             print(f"  converged at epoch {epoch}")
             break
 
-    return w, b, loss
+    return w, b, loss, history
 
 
 def train(df: pd.DataFrame, imputation_means: dict[str, float]):
@@ -149,6 +169,8 @@ def train(df: pd.DataFrame, imputation_means: dict[str, float]):
     n_features = X.shape[1]
 
     weights = {}
+    loss_histories: dict[str, list[float]] = {}
+
     for house in houses:
         y = (df[TARGET] == house).astype(int).values
         w = np.zeros(n_features)
@@ -156,18 +178,20 @@ def train(df: pd.DataFrame, imputation_means: dict[str, float]):
 
         print(f"Training {house} ({OPTIMIZER})...")
         if OPTIMIZER == "sgd":
-            w, b, loss = train_sgd(X, y, w, b)
+            w, b, loss, history = train_sgd(X, y, w, b)
         elif OPTIMIZER == "minibatch":
-            w, b, loss = train_minibatch(X, y, w, b)
+            w, b, loss, history = train_minibatch(X, y, w, b)
         else:
-            w, b, loss = train_batch(X, y, w, b)
+            w, b, loss, history = train_batch(X, y, w, b)
 
         print(f"  final loss = {loss:.4f}")
+        loss_histories[house] = history
         w_real = w / std
         b_real = b - np.sum(w * mean / std)
         weights[house] = {"w": w_real, "b": b_real}
 
     save_weights(weights, imputation_means)
+    plot_loss_curves(loss_histories)
 
 
 def main():
@@ -183,7 +207,7 @@ def main():
     if "--optimizer" in args:
         idx = args.index("--optimizer")
         if idx + 1 >= len(args):
-            print("Error: --optimizer requires a value (batch or sgd)")
+            print("Error: --optimizer requires a value (batch, sgd or minibatch)")
             sys.exit(1)
         OPTIMIZER = args[idx + 1]
         if OPTIMIZER not in ("batch", "sgd", "minibatch"):
